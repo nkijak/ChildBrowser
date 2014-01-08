@@ -41,6 +41,7 @@
 @property (nonatomic, strong) IBOutlet UIBarButtonItem* safariBtn;
 @property (nonatomic, strong) IBOutlet UIActivityIndicatorView* spinner;
 @property (nonatomic, strong) IBOutlet UIToolbar* toolbar;
+@property (nonatomic, strong)          UIWebView* parentWebView;
 
 @property (nonatomic, unsafe_unretained)id <ChildBrowserDelegate> delegate;
 @property (nonatomic, unsafe_unretained) id orientationDelegate;
@@ -48,8 +49,9 @@
 @property (copy) NSString* imageURL;
 @property (assign) BOOL isImage;
 @property (assign) BOOL scaleEnabled;
+@property (nonatomic, retain) NSMutableArray * whiteListURLs;
 
-- (ChildBrowserViewController*)initWithScale:(BOOL)enabled;
+- (ChildBrowserViewController*)initWithScale:(BOOL)enabled parentWebView:(UIWebView *) parentWebView;
 - (IBAction)onDoneButtonPress:(id)sender;
 - (IBAction)onSafariButtonPress:(id)sender;
 - (void)loadURL:(NSString*)url;

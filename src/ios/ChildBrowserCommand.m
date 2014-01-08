@@ -30,9 +30,9 @@
 	
     if (self.childBrowser == nil) {
 #if __has_feature(objc_arc)
-        self.childBrowser = [[ChildBrowserViewController alloc] initWithScale:NO];
+        self.childBrowser = [[ChildBrowserViewController alloc] initWithScale:NO parentWebView:nil];
 #else
-        self.childBrowser = [[[ChildBrowserViewController alloc] initWithScale:NO] autorelease];
+        self.childBrowser = [[[ChildBrowserViewController alloc] initWithScale:NO parentWebView:nil] autorelease];
 #endif
         self.childBrowser.delegate = self;
         self.childBrowser.orientationDelegate = self.viewController;

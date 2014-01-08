@@ -22,6 +22,7 @@
 @synthesize delegate, orientationDelegate;
 @synthesize spinner, webView, addressLabel, toolbar;
 @synthesize closeBtn, refreshBtn, backBtn, fwdBtn, safariBtn;
+@synthesize whiteListURLs, parentWebView;
 
 //    Add *-72@2x.png images to ChildBrowser.bundle
 //    Just duplicate and rename - @RandyMcMillan
@@ -46,15 +47,20 @@
 
 
 
-- (ChildBrowserViewController*)initWithScale:(BOOL)enabled
+- (ChildBrowserViewController*)initWithScale:(BOOL)enabled parentWebView:(UIWebView *) parentWeb
 {
     self = [super init];
 	if(self!=nil)
     {
         [self addGestureRecognizer];
+        NSString * useragent = [NSString stringWithString:@"Mozilla/5.0 (iPhone; U; CPU iPhone OS 4_0 like Mac OS X; en-us) AppleWebKit/532.9 (KHTML, like Gecko) Version/4.0.5 Mobile/8A293 Safari/6531.22.7"];
+    
+        NSDictionary *dictionary = [[NSDictionary alloc] initWithObjectsAndKeys:useragent, @"UserAgent", nil];
+        [[NSUserDefaults standardUserDefaults] registerDefaults:dictionary];
     }
 	
 	self.scaleEnabled = enabled;
+    self.parentWebView = parentWeb;
 	
 	return self;	
 }
@@ -100,6 +106,8 @@
     self.orientationDelegate = nil;
 	
 #if !__has_feature(objc_arc)
+    [self.whiteListURLs release];
+    [self.parentWebView release];
 	[self.webView release];
 	[self.closeBtn release];
 	[self.refreshBtn release];
@@ -109,7 +117,7 @@
 	[self.safariBtn release];
 	[self.spinner release];
     [self.toolbar release];
-
+d
 	[super dealloc];
 #endif
 }
@@ -183,16 +191,65 @@
 	}
 	else
 	{
-		imageURL = @"";
-		isImage = NO;
+		self.imageURL = @"";
+		self.isImage = NO;
 		NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:url]];
 		[self.webView loadRequest:request];
 	}
 	self.webView.hidden = NO;
 }
 
+- (BOOL)webView:(UIWebView *)theWebView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType
+{
+    NSString * url = [[request URL] absoluteString];
+    NSURL * urlFromNSURL = [NSURL URLWithString: url];
+    NSString * host = urlFromNSURL.host;
+    NSLog(@"url: %@", url);
+    
+    BOOL isInternalURL = NO;
+    
+    //if its local or it's in the whitelist
+    if ([urlFromNSURL isFileURL] )
+    {
+        isInternalURL = YES;
+        
+        //for testing...
+        if ( [url rangeOfString:@"childBrowserTest.html"].location != NSNotFound)
+        {
+            isInternalURL = NO;
+        }
+        
+    }
+    else if (self.whiteListURLs)
+    {
+        NSEnumerator *enu = [self.whiteListURLs objectEnumerator];
+        NSString * domain;
+        while ((domain = [enu nextObject])) {
+            if (host && [host rangeOfString:domain].location != NSNotFound)
+            {
+                isInternalURL = YES;
+                break;
+            } 
+        }                
+    }
+    
+    //open whitelist in parent browser...
+    if (isInternalURL)
+    {
+        [self.parentWebView loadRequest:request];
+        [self closeBrowser];        
+        return NO;
+    }
+    
+    
+    return YES;
+}
+
+
 
 - (void)webViewDidStartLoad:(UIWebView *)sender {
+    [[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:YES];
+
 	self.addressLabel.text = @"Loading...";
 	self.backBtn.enabled = webView.canGoBack;
 	self.fwdBtn.enabled = webView.canGoForward;
@@ -203,6 +260,8 @@
 
 - (void)webViewDidFinishLoad:(UIWebView *)sender 
 {
+    [[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:NO];
+
 	NSURLRequest *request = self.webView.request;
 	NSLog(@"New Address is : %@",request.URL.absoluteString);
 
@@ -220,6 +279,7 @@
     NSLog (@"webView:didFailLoadWithError");
     NSLog (@"%@", [error localizedDescription]);
     NSLog (@"%@", [error localizedFailureReason]);
+    [[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:NO];
 
     [spinner stopAnimating];
     addressLabel.text = @"Failed";
